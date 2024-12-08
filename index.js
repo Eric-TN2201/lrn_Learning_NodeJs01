@@ -18,7 +18,7 @@ db.connect();
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static("public"));
 
-async function checkVisitedCountry(){
+async function checkVisitedCountryList(){
   const result = await db.query("select country_code from visited_countries");
 
   let countries = [];
@@ -28,8 +28,13 @@ async function checkVisitedCountry(){
   return countries;
 }
 
+async function checkVisitedCountry(countryCode){
+  const result = await db.query("select country_code from visited_countries where country_code = $1", [ countryCode ]);
+  return result.rows.length ? true : false;
+}
+
 app.get("/", async (req, res) => {
-  const countries = await checkVisitedCountry();
+  const countries = await checkVisitedCountryList();
 
   res.render("index.ejs", { countries, total: countries.length })
 });
@@ -42,10 +47,13 @@ app.post("/add", async (req, res) => {
   if (result.rows.length !== 0) {
     const data = result.rows[0];
     const countryCode = data.country_code;
+    const isVisited = await checkVisitedCountry(countryCode);
     
-    await db.query("insert into visited_countries (country_code) values ($1)", [ countryCode ]);
-    res.redirect("/");
+    if (!isVisited) {
+      await db.query("insert into visited_countries (country_code) values ($1)", [ countryCode ]);
+    }
   }
+  res.redirect("/");
 });
 
 app.listen(port, () => {
