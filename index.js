@@ -35,23 +35,41 @@ async function checkVisitedCountry(countryCode){
 
 app.get("/", async (req, res) => {
   const countries = await checkVisitedCountryList();
-
+  // console.log("coun", countries);
+  
   res.render("index.ejs", { countries, total: countries.length })
 });
 
 app.post("/add", async (req, res) => {
   const input = req.body["country"];
-
-  const result = await db.query("select country_code from countries where country_name = $1", [ input ]);
+  console.log("in",input);
   
-  if (result.rows.length !== 0) {
+  try {   // check exist
+    const result = await db.query("select country_code from countries where country_name = $1", [ input ]);
     const data = result.rows[0];
     const countryCode = data.country_code;
-    const isVisited = await checkVisitedCountry(countryCode);
     
-    if (!isVisited) {
+    try {   // check visited 
       await db.query("insert into visited_countries (country_code) values ($1)", [ countryCode ]);
+    } catch (error) {   // if country is visited
+      const countries = await checkVisitedCountryList();
+      
+      return res.render("index.ejs", {
+        countries: countries,
+        total: countries.length,
+        error: "country is visited"
+      });
     }
+  } catch (error) {  // if country is not exist
+    console.error("err", error);
+    
+      const countries = await checkVisitedCountryList();
+      
+      return res.render("index.ejs", {
+        countries: countries,
+        total: countries.length,
+        error: "country is not exist"
+      });
   }
   res.redirect("/");
 });
