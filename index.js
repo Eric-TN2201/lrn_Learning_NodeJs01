@@ -110,21 +110,40 @@ app.post("/add", async (req, res) => {
 });
 
 app.post("/user", async (req, res) => {
-  currentUserId = parseInt(req.body["user"]);
-  countries = await checkVisisted(currentUserId);
-  user = await getUser(currentUserId);
-  
-  res.render("index.ejs", {
-    countries: countries,
-    total: countries.length,
-    users: users,
-    color: user.color,
-  });
+  if (req.body.add == "new") {
+    res.render("new.ejs");
+  }else{
+    currentUserId = parseInt(req.body["user"]);
+    countries = await checkVisisted(currentUserId);
+    user = await getUser(currentUserId);
+    users = await getUsers();
+    
+    res.render("index.ejs", {
+      countries: countries,
+      total: countries.length,
+      users: users,
+      color: user.color,
+    });
+  }
 });
 
 app.post("/new", async (req, res) => {
+  console.log(req.body);
+  let data = req.body;
+  if (!data.name || !data.color) {
+    alert("Please enter full details!");
+  }
 
-  
+  try {
+    const userN = await db.query("INSERT INTO users (name, color) values ($1,$2) returning *;", [data.name, data.color]);
+
+    currentUserId = userN.rows[0].id;
+    
+    res.redirect("/");
+  } catch (error) {
+    console.log(error);
+    
+  }
   //Hint: The RETURNING keyword can return the data that was inserted.
   //https://www.postgresql.org/docs/current/dml-returning.html
 });
